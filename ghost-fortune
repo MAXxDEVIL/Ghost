@@ -83,14 +83,16 @@ draw_box() {
     local width=60
     local padding=2
     local inner=$((width - padding*2))
-    echo -e "${MAGENTA}${BOLD}"
-    printf "╔%${width}s╗\n" | tr ' ' '═'
-    python3 - "$text" "$inner" "$padding" "$width" << 'PYEOF'
+    printf "${MAGENTA}${BOLD}╔%${width}s╗${RESET}\n" | tr ' ' '═'
+    python3 - "$text" "$inner" "$padding" "$width" "$MAGENTA" "$BOLD" "$RESET" << 'PYEOF'
 import sys
 text = sys.argv[1]
 inner = int(sys.argv[2])
 padding = int(sys.argv[3])
 width = int(sys.argv[4])
+MAGENTA = sys.argv[5]
+BOLD = sys.argv[6]
+RESET = sys.argv[7]
 for line in text.splitlines():
     if not line.strip():
         continue
@@ -103,12 +105,11 @@ for line in text.splitlines():
         if cut == 0:
             cut = inner
         chunk = remaining[:cut]
-        print('║' + ' '*padding + chunk.ljust(inner) + ' '*padding + '║')
+        print(f'{MAGENTA}{BOLD}║{RESET}' + ' '*padding + chunk.ljust(inner) + ' '*padding + f'{MAGENTA}{BOLD}║{RESET}')
         remaining = remaining[cut:].lstrip()
-    print('║' + ' '*padding + remaining.ljust(inner) + ' '*padding + '║')
+    print(f'{MAGENTA}{BOLD}║{RESET}' + ' '*padding + remaining.ljust(inner) + ' '*padding + f'{MAGENTA}{BOLD}║{RESET}')
 PYEOF
-    printf "╚%${width}s╝\n" | tr ' ' '═'
-    echo -e "${RESET}"
+    printf "${MAGENTA}${BOLD}╚%${width}s╝${RESET}\n" | tr ' ' '═'
 }
 
 get_classic_fortune() {
@@ -344,7 +345,7 @@ if [ $# -gt 0 ]; then
     case "$1" in
         --classic|-c)
             out=$(get_classic_fortune)
-            echo "$out"
+            printf "${WHITE}%s${RESET}\n" "$out"
             speak_text "$out"
             exit 0
             ;;
@@ -353,7 +354,7 @@ if [ $# -gt 0 ]; then
             base=$(get_classic_fortune)
             out=$(possess_fortune "$base")
             play_sound reveal
-            echo "$out"
+            printf "%b\n" "$out"
             speak_text "$out"
             exit 0
             ;;
@@ -361,7 +362,7 @@ if [ $# -gt 0 ]; then
             play_sound summon
             out=$(generate_fortune)
             play_sound reveal
-            echo "$out"
+            printf "%b\n" "$out"
             speak_text "$out"
             exit 0
             ;;
@@ -369,7 +370,7 @@ if [ $# -gt 0 ]; then
             play_sound summon
             out=$(tell_tale)
             play_sound reveal
-            echo "$out"
+            printf "%b\n" "$out"
             speak_text "$out"
             exit 0
             ;;
@@ -377,7 +378,7 @@ if [ $# -gt 0 ]; then
             play_sound summon
             out=$(generate_tale)
             play_sound reveal
-            echo "$out"
+            printf "%b\n" "$out"
             speak_text "$out"
             exit 0
             ;;
