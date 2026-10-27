@@ -34,10 +34,28 @@ draw_box() {
     local inner=$((width - padding*2))
     echo -e "${MAGENTA}${BOLD}"
     printf "╔%${width}s╗\n" | tr ' ' '═'
-    while IFS= read -r line || [ -n "$line" ]; do
-        # wrap if needed (simple)
-        printf "║%${padding}s%-${inner}s%${padding}s║\n" "" "$line" ""
-    done <<< "$text"
+    python3 - "$text" "$inner" "$padding" "$width" << 'PYEOF'
+import sys
+text = sys.argv[1]
+inner = int(sys.argv[2])
+padding = int(sys.argv[3])
+width = int(sys.argv[4])
+for line in text.splitlines():
+    if not line.strip():
+        continue
+    remaining = line
+    while len(remaining) > inner:
+        cut = inner
+        # find last space
+        while cut > 0 and remaining[cut-1] != ' ':
+            cut -= 1
+        if cut == 0:
+            cut = inner
+        chunk = remaining[:cut]
+        print('║' + ' '*padding + chunk.ljust(inner) + ' '*padding + '║')
+        remaining = remaining[cut:].lstrip()
+    print('║' + ' '*padding + remaining.ljust(inner) + ' '*padding + '║')
+PYEOF
     printf "╚%${width}s╝\n" | tr ' ' '═'
     echo -e "${RESET}"
 }
