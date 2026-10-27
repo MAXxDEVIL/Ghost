@@ -1,10 +1,13 @@
 #!/bin/bash
 # Ghost Fortune - revive fortune-mod with AI possession
 # shortcut: no fortune binary installed by default; ceiling: uses embedded corpus as fallback; upgrade: bundle fortune-mod + open fortune dbs.
+# shortcut: spooky sound/vocal opt-in only; ceiling: needs audio hardware/tools; upgrade: use pulse/pipewire APIs.
 
 # Config (reuse ghost env vars)
 HOST="${GHOST_HOST:-http://localhost:11434}"
 MODEL="${GHOST_MODEL:-llama-3.2:3b}"
+GHOST_SOUND="${GHOST_SOUND:-0}"
+GHOST_VOICE="${GHOST_VOICE:-0}"
 
 # Embedded fallback corpus (tiny, public domain style)
 EMBEDDED_FORTUNES=(
@@ -38,6 +41,46 @@ if [ -t 1 ] && command -v tput >/dev/null 2>&1; then
 else
     RED=''; GREEN=''; YELLOW=''; BLUE=''; MAGENTA=''; CYAN=''; WHITE=''; BOLD=''; DIM=''; RESET=''
 fi
+
+# Spooky sound effects
+play_sound() {
+    [ "$GHOST_SOUND" != "1" ] && return 0
+    local type="$1"
+    if command -v ffmpeg >/dev/null 2>&1 && command -v aplay >/dev/null 2>&1; then
+        case "$type" in
+            click)
+                ffmpeg -f lavfi -i "sine=frequency=800:duration=0.05" -f lavfi -i "anoisesrc=d=0.05:c=pink:r=44100" -filter_complex "[0:a][1:a]amix=inputs=2:duration=shortest" -f wav - 2>/dev/null | aplay -q 2>/dev/null &
+                ;;
+            summon)
+                ffmpeg -f lavfi -i "sine=frequency=200:duration=0.3" -f lavfi -i "anoisesrc=d=0.3:c=brown:r=44100" -filter_complex "[0:a][1:a]amix=inputs=2:duration=shortest,lowpass=f=400" -f wav - 2>/dev/null | aplay -q 2>/dev/null &
+                ;;
+            reveal)
+                ffmpeg -f lavfi -i "sine=frequency=150:duration=0.4" -f lavfi -i "anoisesrc=d=0.4:c=pink:r=44100" -filter_complex "[0:a][1:a]amix=inputs=2:duration=shortest,lowpass=f=600,aphaser" -f wav - 2>/dev/null | aplay -q 2>/dev/null &
+                ;;
+            quit)
+                ffmpeg -f lavfi -i "sine=frequency=100:duration=0.6" -f lavfi -i "anoisesrc=d=0.6:c=brown:r=44100" -filter_complex "[0:a][1:a]amix=inputs=2:duration=shortest,lowpass=f=300,afade=t=out:st=0.3:d=0.3" -f wav - 2>/dev/null | aplay -q 2>/dev/null &
+                ;;
+        esac
+    fi
+}
+
+# Spooky vocal/TTS
+speak_text() {
+    [ "$GHOST_VOICE" != "1" ] && return 0
+    local text="$1"
+    # strip ANSI codes and box drawing
+    text=$(echo "$text" | sed 's/\x1b\[[0-9;]*m//g' | sed 's/[╔╗╚╝║═─]//g' | tr -d '\n' | sed 's/  */ /g')
+    # limit length
+    [ ${#text} -gt 200 ] && text="${text:0:197}..."
+    [ -z "$text" ] && return 0
+    if command -v espeak >/dev/null 2>&1; then
+        espeak -v en+m3 -p 25 -s 110 "$text" 2>/dev/null &
+    elif command -v spd-say >/dev/null 2>&1; then
+        spd-say -r -20 -p -20 "$text" 2>/dev/null &
+    elif command -v festival >/dev/null 2>&1; then
+        echo "$text" | festival --tts 2>/dev/null &
+    fi
+}
 
 draw_box() {
     local text="$1"
@@ -219,57 +262,77 @@ main_menu() {
         
         case "$choice" in
             1)
+                play_sound click
                 clear
                 echo -e "${GREEN}${BOLD}═══ CLASSIC ═══${RESET}\n"
                 local_fortune=$(get_classic_fortune)
                 draw_box "$local_fortune"
+                speak_text "$local_fortune"
                 echo -e -n "\n${DIM}Press any key to return...${RESET}"
                 read -n 1
                 ;;
             2)
+                play_sound click
                 clear
                 echo -e "${MAGENTA}${BOLD}═══ HAUNT ═══${RESET}\n"
                 echo -e "${DIM}Summoning from the archive...${RESET}\n"
+                play_sound summon
                 sleep 0.5
                 base_fortune=$(get_classic_fortune)
                 result=$(possess_fortune "$base_fortune")
+                play_sound reveal
                 draw_box "$result"
+                speak_text "$result"
                 echo -e -n "\n${DIM}Press any key to return...${RESET}"
                 read -n 1
                 ;;
             3)
+                play_sound click
                 clear
                 echo -e "${CYAN}${BOLD}═══ POSSESS ═══${RESET}\n"
                 echo -e "${DIM}Channeling from beyond...${RESET}\n"
+                play_sound summon
                 sleep 0.5
                 result=$(generate_fortune)
+                play_sound reveal
                 draw_box "$result"
+                speak_text "$result"
                 echo -e -n "\n${DIM}Press any key to return...${RESET}"
                 read -n 1
                 ;;
             4)
+                play_sound click
                 clear
                 echo -e "${RED}${BOLD}═══ TALES ═══${RESET}\n"
                 echo -e "${DIM}Whispering from forgotten logs...${RESET}\n"
+                play_sound summon
                 sleep 0.5
                 result=$(tell_tale)
+                play_sound reveal
                 draw_box "$result"
+                speak_text "$result"
                 echo -e -n "\n${DIM}Press any key to return...${RESET}"
                 read -n 1
                 ;;
             5)
+                play_sound click
                 clear
                 echo -e "${RED}${BOLD}═══ TALES (AI) ═══${RESET}\n"
                 echo -e "${DIM}Channeling from beyond...${RESET}\n"
+                play_sound summon
                 sleep 0.5
                 result=$(generate_tale)
+                play_sound reveal
                 draw_box "$result"
+                speak_text "$result"
                 echo -e -n "\n${DIM}Press any key to return...${RESET}"
                 read -n 1
                 ;;
             q|Q)
+                play_sound quit
                 clear
                 echo -e "${MAGENTA}👻 The spirits return to their slumber...${RESET}"
+                sleep 0.3
                 exit 0
                 ;;
             *)
@@ -284,24 +347,42 @@ main_menu() {
 if [ $# -gt 0 ]; then
     case "$1" in
         --classic|-c)
-            get_classic_fortune
+            out=$(get_classic_fortune)
+            echo "$out"
+            speak_text "$out"
             exit 0
             ;;
         --haunt|-h)
+            play_sound summon
             base=$(get_classic_fortune)
-            possess_fortune "$base"
+            out=$(possess_fortune "$base")
+            play_sound reveal
+            echo "$out"
+            speak_text "$out"
             exit 0
             ;;
         --possess|-p)
-            generate_fortune
+            play_sound summon
+            out=$(generate_fortune)
+            play_sound reveal
+            echo "$out"
+            speak_text "$out"
             exit 0
             ;;
         --tale|-t)
-            tell_tale
+            play_sound summon
+            out=$(tell_tale)
+            play_sound reveal
+            echo "$out"
+            speak_text "$out"
             exit 0
             ;;
         --tale-ai|--haunt-tale)
-            generate_tale
+            play_sound summon
+            out=$(generate_tale)
+            play_sound reveal
+            echo "$out"
+            speak_text "$out"
             exit 0
             ;;
         *)

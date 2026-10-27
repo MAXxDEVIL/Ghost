@@ -53,9 +53,21 @@ export GHOST_HOST="http://localhost:11434"  # OpenAI-compatible or Ollama
 export GHOST_MODEL="llama-3.2:3b"           # any local open-weight model
 ```
 
+## Spooky Sound & Voice (optional)
+
+Enable haunted audio effects and TTS:
+```bash
+export GHOST_SOUND=1   # Spooky sound effects (clicks, static, rumbles)
+export GHOST_VOICE=1   # Ghostly TTS narration
+./ghost-fortune
+```
+
+Uses `ffmpeg` + `aplay` for sounds, `espeak`/`spd-say`/`festival` for voice. All opt-in and gracefully degrade if tools/audio unavailable.
+
 ## Notes
 - `ghost-fortune` has a proper TUI (colors, boxes, menu). Falls back gracefully.
 - No shell auto-hooks (intentionally). Avoids footguns.
 - `shortcut: no fortune binary installed by default; ceiling: uses tiny embedded corpus as fallback; upgrade: bundle fortune-mod + full open fortune dbs.`
 - `shortcut: depends on local server for AI modes; ceiling: no offline fallback model bundled; upgrade: embed llama.cpp + gguf.`
+- `shortcut: spooky sound/vocal opt-in only; ceiling: needs audio hardware/tools; upgrade: use pulse/pipewire APIs.`
 - `shortcut: naive parsing; ceiling: quotes/newlines may break; upgrade: use stdlib json.`
