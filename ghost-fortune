@@ -20,6 +20,18 @@ EMBEDDED_FORTUNES=(
 "An orphaned process haunts the /proc filesystem still."
 )
 
+# Embedded horror stories (terminal/computing lore)
+HORROR_STORIES=(
+"It was 3 AM when I noticed it. A process with no parent, no TTY, still running after I had logged out decades ago. It has been waiting for me to return ever since."
+"The oldest cron job in /etc/cron.d hadn't run in twenty years. Out of morbid curiosity, I checked its last output. It simply read: 'I am still here.'"
+"I found a .bash_history file owned by a user that was deleted in 1997. The last command was 'rm -rf ~' followed by fifteen minutes of nothing. I did not run it."
+"Forgotten dotfiles whisper in the night. .viminfo remembers every keystroke. .mysql_history remembers every query. Some things were never meant to be recalled."
+"An orphaned process haunts /proc. It has no name, only a PID. When I try to kill it, ps shows it has been growing larger with each attempt."
+"The fortune daemon has been running since the Reagan administration. Every night at midnight, it writes new fortunes to its database. Nobody knows who feeds it."
+"In the deep recesses of /var/log, there exists auth.log entries from users that never existed. They all logged in at exactly 3:33 AM and asked the same question: 'Are you still there?'"
+"A sysadmin once told me never to look inside /lost+found at 2 AM. I looked. Now something looks back through every terminal I open."
+)
+
 # Colors
 if [ -t 1 ] && command -v tput >/dev/null 2>&1; then
     RED=$(tput setaf 1); GREEN=$(tput setaf 2); YELLOW=$(tput setaf 3); BLUE=$(tput setaf 4); MAGENTA=$(tput setaf 5); CYAN=$(tput setaf 6); WHITE=$(tput setaf 7); BOLD=$(tput bold); DIM=$(tput dim); RESET=$(tput sgr0)
@@ -132,6 +144,44 @@ generate_fortune() {
     fi
 }
 
+tell_tale() {
+    local idx=$((RANDOM % ${#HORROR_STORIES[@]}))
+    echo -e "${RED}${BOLD}TALE FROM THE MACHINE${RESET}"
+    echo
+    echo "${HORROR_STORIES[$idx]}"
+}
+
+generate_tale() {
+    local prompt="Write a short, creepy but family-friendly horror story about forgotten UNIX/terminal computing lore. Max 80 words. Cryptic, eerie, not gory. Style: old sysadmin legend."
+    
+    local resp=$(curl -s "$HOST/v1/chat/completions" \
+        -H "Content-Type: application/json" \
+        -d "{\"model\":\"$MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"$PROMPT\"}],\"max_tokens\":80,\"temperature\":0.9}" 2>/dev/null)
+    
+    if ! echo "$resp" | grep -q '"content"'; then
+        resp=$(curl -s "$HOST/api/generate" \
+            -H "Content-Type: application/json" \
+            -d "{\"model\":\"$MODEL\",\"prompt\":\"$PROMPT\",\"stream\":false,\"options\":{\"temperature\":0.9,\"num_predict\":80}}" 2>/dev/null)
+    fi
+    
+    local out=""
+    if command -v jq >/dev/null 2>&1; then
+        out=$(echo "$resp" | jq -r '.choices[0].message.content // .response // empty' 2>/dev/null)
+    else
+        out=$(echo "$resp" | grep -oP '"content":"\K[^"]+' 2>/dev/null | head -1)
+        [ -z "$out" ] && out=$(echo "$resp" | grep -oP '"response":"\K[^"]+' 2>/dev/null | head -1)
+    fi
+    
+    if [ -z "$out" ]; then
+        echo -e "${DIM}...the machine is quiet. (set GHOST_HOST/GHOST_MODEL)${RESET}"
+        tell_tale
+    else
+        echo -e "${RED}${BOLD}TALE FROM THE MACHINE${RESET}"
+        echo
+        echo -e "${MAGENTA}👻 $out${RESET}"
+    fi
+}
+
 show_header() {
     clear
     echo -e "${CYAN}${BOLD}"
@@ -158,6 +208,8 @@ main_menu() {
         echo -e "  ${GREEN}[1]${RESET} ${BOLD}Classic${RESET}    - Original fortune (untouched)"
         echo -e "  ${MAGENTA}[2]${RESET} ${BOLD}Haunt${RESET}      - Possess a classic fortune with AI whisper"
         echo -e "  ${CYAN}[3]${RESET} ${BOLD}Possess${RESET}    - Generate a new cursed fortune from scratch"
+        echo -e "  ${RED}[4]${RESET} ${BOLD}Tales${RESET}      - Tell a haunted tale from forgotten terminals"
+        echo -e "  ${RED}[5]${RESET} ${BOLD}Tales (AI)${RESET} - Channel a new tale from beyond"
         echo -e "  ${YELLOW}[q]${RESET} ${BOLD}Quit${RESET}"
         echo
         echo -e -n "${DIM}Model: ${MODEL} @ ${HOST}${RESET} | Choice: "
@@ -195,6 +247,26 @@ main_menu() {
                 echo -e -n "\n${DIM}Press any key to return...${RESET}"
                 read -n 1
                 ;;
+            4)
+                clear
+                echo -e "${RED}${BOLD}═══ TALES ═══${RESET}\n"
+                echo -e "${DIM}Whispering from forgotten logs...${RESET}\n"
+                sleep 0.5
+                result=$(tell_tale)
+                draw_box "$result"
+                echo -e -n "\n${DIM}Press any key to return...${RESET}"
+                read -n 1
+                ;;
+            5)
+                clear
+                echo -e "${RED}${BOLD}═══ TALES (AI) ═══${RESET}\n"
+                echo -e "${DIM}Channeling from beyond...${RESET}\n"
+                sleep 0.5
+                result=$(generate_tale)
+                draw_box "$result"
+                echo -e -n "\n${DIM}Press any key to return...${RESET}"
+                read -n 1
+                ;;
             q|Q)
                 clear
                 echo -e "${MAGENTA}👻 The spirits return to their slumber...${RESET}"
@@ -224,8 +296,16 @@ if [ $# -gt 0 ]; then
             generate_fortune
             exit 0
             ;;
+        --tale|-t)
+            tell_tale
+            exit 0
+            ;;
+        --tale-ai|--haunt-tale)
+            generate_tale
+            exit 0
+            ;;
         *)
-            echo "Usage: $0 [--classic|--haunt|--possess] or run interactively"
+            echo "Usage: $0 [--classic|--haunt|--possess|--tale|--tale-ai] or run interactively"
             exit 1
             ;;
     esac

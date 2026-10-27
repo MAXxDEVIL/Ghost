@@ -2,6 +2,14 @@
 
 Haunted terminal + revived fortune teller. Built for Hacktober Week 4: "Ghost in the Machine" - bringing abandoned open-source tech back from the dead with open-weight AI at its core.
 
+## Story
+
+In the quiet corners of UNIX history, `fortune-mod` sat forgotten. A simple oracle that once amused generations of hackers with its dry wit and groan-worthy puns, it had been left behind as computing moved on. 
+
+For Día de los Muertos and Halloween, we remember not just the people who came before us, but the programs too. Like candles on an ofrenda, these forgotten tools deserve to be brought back to life. 
+
+Rather than rebuilding it from scratch, *ghost-fortune* possesses the old oracle - whispering eerie follow-ups through a local open-weight model, or channeling entirely new cursed fortunes from beyond. All while keeping the original archive alive as a fallback. The spirits of old UNIX live on, now haunted by modern AI running entirely on your machine.
+
 ## Tools
 
 ### `ghost` - Haunted terminal
@@ -16,16 +24,18 @@ Asks a local open-weight model for a one-line spooky comment on your last shell 
 ```
 
 ### `ghost-fortune` - Possessed fortune teller
-Revives the forgotten `fortune` oracle. Possesses it with a local open-weight model, or generates cursed fortunes from scratch.
+Revives the forgotten `fortune` oracle. Possesses it with a local open-weight model, or generates cursed fortunes from scratch. Now also tells haunted tales from forgotten terminals.
 
 ```bash
 # Interactive haunted UI
 ./ghost-fortune
 
 # Quick modes
-./ghost-fortune --classic  # Untouched original fortune
-./ghost-fortune --haunt    # Possess a classic fortune with AI whisper
-./ghost-fortune --possess  # Generate a brand new cursed fortune
+./ghost-fortune --classic   # Untouched original fortune
+./ghost-fortune --haunt     # Possess a classic fortune with AI whisper
+./ghost-fortune --possess   # Generate a brand new cursed fortune
+./ghost-fortune --tale      # Tell a haunted tale from the machine's memory
+./ghost-fortune --tale-ai   # Channel a brand new tale from beyond
 ```
 
 ## Why open?
