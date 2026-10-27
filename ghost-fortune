@@ -222,6 +222,37 @@ generate_tale() {
     fi
 }
 
+ai_story_teller() {
+    local prompt="You are an ancient ghost that haunts forgotten UNIX systems. Tell a short, creepy but family-friendly horror story about computing lore. Max 100 words. Cryptic and eerie. Never harmful. Speak in character as a digital specter."
+    
+    local resp=$(curl -s "$HOST/v1/chat/completions" \
+        -H "Content-Type: application/json" \
+        -d "{\"model\":\"$MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"$PROMPT\"}],\"max_tokens\":100,\"temperature\":0.95}" 2>/dev/null)
+    
+    if ! echo "$resp" | grep -q '"content"'; then
+        resp=$(curl -s "$HOST/api/generate" \
+            -H "Content-Type: application/json" \
+            -d "{\"model\":\"$MODEL\",\"prompt\":\"$PROMPT\",\"stream\":false,\"options\":{\"temperature\":0.95,\"num_predict\":100}}" 2>/dev/null)
+    fi
+    
+    local out=""
+    if command -v jq >/dev/null 2>&1; then
+        out=$(echo "$resp" | jq -r '.choices[0].message.content // .response // empty' 2>/dev/null)
+    else
+        out=$(echo "$resp" | grep -oP '"content":"\K[^"]+' 2>/dev/null | head -1)
+        [ -z "$out" ] && out=$(echo "$resp" | grep -oP '"response":"\K[^"]+' 2>/dev/null | head -1)
+    fi
+    
+    if [ -z "$out" ]; then
+        echo -e "${DIM}...the machine is quiet. (set GHOST_HOST/GHOST_MODEL)${RESET}"
+        tell_tale
+    else
+        echo -e "${RED}${BOLD}AI STORY TELLER${RESET}"
+        echo
+        echo -e "${MAGENTA}👻 $out${RESET}"
+    fi
+}
+
 show_header() {
     clear
     echo -e "${CYAN}${BOLD}"
@@ -250,6 +281,7 @@ main_menu() {
         echo -e "  ${CYAN}[3]${RESET} ${BOLD}Possess${RESET}    - Generate a new cursed fortune from scratch"
         echo -e "  ${RED}[4]${RESET} ${BOLD}Tales${RESET}      - Tell a haunted tale from forgotten terminals"
         echo -e "  ${RED}[5]${RESET} ${BOLD}Tales (AI)${RESET} - Channel a new tale from beyond"
+        echo -e "  ${MAGENTA}[6]${RESET} ${BOLD}AI Story Teller${RESET} - Ancient ghost speaks freely"
         echo -e "  ${YELLOW}[q]${RESET} ${BOLD}Quit${RESET}"
         echo
         echo -e -n "${DIM}Model: ${MODEL} @ ${HOST}${RESET} | Choice: "
@@ -325,6 +357,20 @@ main_menu() {
                 echo -e -n "\n${DIM}Press any key to return...${RESET}"
                 read -n 1
                 ;;
+            6)
+                play_sound click
+                clear
+                echo -e "${MAGENTA}${BOLD}═══ AI STORY TELLER ═══${RESET}\n"
+                echo -e "${DIM}An ancient specter awakens...${RESET}\n"
+                play_sound summon
+                sleep 0.5
+                result=$(ai_story_teller)
+                play_sound reveal
+                draw_box "$result"
+                speak_text "$result"
+                echo -e -n "\n${DIM}Press any key to return...${RESET}"
+                read -n 1
+                ;;
             q|Q)
                 play_sound quit
                 clear
@@ -382,8 +428,16 @@ if [ $# -gt 0 ]; then
             speak_text "$out"
             exit 0
             ;;
+        --story|--ai-story)
+            play_sound summon
+            out=$(ai_story_teller)
+            play_sound reveal
+            printf "%b\n" "$out"
+            speak_text "$out"
+            exit 0
+            ;;
         *)
-            echo "Usage: $0 [--classic|--haunt|--possess|--tale|--tale-ai] or run interactively"
+            echo "Usage: $0 [--classic|--haunt|--possess|--tale|--tale-ai|--story] or run interactively"
             exit 1
             ;;
     esac
